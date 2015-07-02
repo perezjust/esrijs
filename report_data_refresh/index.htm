@@ -1,0 +1,254 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <!--The viewport meta tag is used to improve the presentation and behavior of the samples
+    on iOS devices-->
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+
+  <title>Some GIS Reports</title>
+  <link href="Styles/Site.css" rel="stylesheet" type="text/css" />
+  <link href="Styles/Controls.css" rel="stylesheet" type="text/css" />
+  <script src="http://js.arcgis.com/3.12/"></script>
+  
+</head>
+<body onload="app.onLoadSetUp()">
+	<div class="title" style="background-color:black; width:100%;">
+		<div style="float:left;">
+			<img src="Images/bwp-logo1.jpg" alt="Some Alt Text"/>                    
+		</div>
+		<h1 id="title" ></h1>
+    </div>
+	<div style="height: 100px;">
+	</div>
+	</p>
+	</p>
+	<div>
+	
+	<div class="main">
+	</p>
+	</p>
+	
+	<h3>Refresh Report Group</h3>
+	<select id="ReportType">
+		<option value="Accounting">Accounting</option>
+		<option value="Class">Class</option>
+		<option value="Compliance">Compliance</option>
+		<option value="CurrentRiskResults">Current Risk Results</option>
+		<option value="HCA">HCA</option>
+		<option value="PHMSA">PHMSA</option>
+		<option value="OperatingPressure">Operating Pressure</option>
+	</select>
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	<button onclick="app.execGP()" title="Click to Submit Refresh Job for Selected Report" >Run Report Refresh</button>
+	&nbsp;
+	&nbsp;
+	<button onclick="app.cancelGP()" title="Cancel Refresh">Cancel Refresh</button>
+	
+	</p>
+	<a href="#" id="report_link">Go to Reports Page</a>
+	</p>
+	</p>
+	</p>
+	<h3 id="progressMessage"></h3>
+	<!--h3 id="progressProgessor">Progressing... <img id="progress_image" style="visibility:hidden;" src="loading_black.gif" style /></h3-->
+
+	<textarea rows="25" cols="100" readonly="true" id="gpmessages">
+	</textarea>
+	</div>
+	
+	<script>
+		
+		var docURL = document.URL;
+		var globalenv = "";
+		var globaljobId = "";
+		var globalGPTaskURL = "";
+		var globalSubmitTime = "";
+		
+		var app;
+		
+
+		
+		function setTextArea() {
+			document.getElementById("gpmessages").style.color = "#696969";
+			document.getElementById("gpmessages").value = "Choose a report type in the drop down list above, then click the Run Report Refresh button to kick off data refresh process.";
+		}
+
+
+		function onLoadSetUp(){
+			switch (docURL) {
+				case "http://reportdatarefresh-qa/":
+					globalenv = "QA_APP";
+					break;
+				case "http://reportdatarefresh-qa":
+					globalenv = "QA_APP";
+					break;
+				case "http://reportdatarefresh-dev":
+					globalenv = "DEV_APP";
+					break;
+				case "http://reportdatarefresh-dev/":
+					globalenv = "DEV_APP";
+					break;
+				default:
+					globalenv = "PROD_APP";
+			}
+			setReportPageUrl();
+			setTitle();
+			setTaskURL();
+			setTextArea();
+		}
+
+		
+		function setTaskURL(){
+			console.log(globalenv);
+			console.log(globalGPTaskURL);
+			switch (globalenv) {
+				case "QA_APP":
+					globalGPTaskURL = "http://someserver/arcgis/rest/services/AGSReportDataRefresh_QA/GPServer/AGSReportDataRefresh";
+					break;
+				case "DEV_APP":
+					globalGPTaskURL = "http://someserver/arcgis/rest/services/AGSReportDataRefresh_DEV/GPServer/AGSReportDataRefresh";
+					break;
+				default: 
+					globalGPTaskURL = "http://someserver/arcgis/rest/services/AGSReportDataRefresh/GPServer/AGSReportDataRefresh";
+			}
+		}
+		
+		
+		function setReportPageUrl(){
+			switch (globalenv) {
+				case "QA_APP":
+					document.getElementById("report_link").href="http://ssrsqa/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
+					break;
+				case "DEV_APP":
+					document.getElementById("report_link").href="http://ssrsdev/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
+					break;
+				default:
+					document.getElementById("report_link").href="http://ssrsprod/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
+			}
+		}
+			
+			
+		function setTitle() {
+			switch (globalenv) {
+				case "QA_APP":
+					document.getElementById("title").innerHTML = "Report Data Refresh - QA";
+					break;
+				case "DEV_APP":
+					document.getElementById("title").innerHTML = "Report Data Refresh - DEV";
+					break;
+				default:
+					document.getElementById("title").innerHTML = "Report Data Refresh";
+
+			}
+		}
+		
+		
+		window.onload = function() {
+			onLoadSetUp();
+		}
+		
+		
+
+		require(["esri/tasks/Geoprocessor", "dojo/parser", "dijit/registry", "esri/tasks/GPMessage"
+		], function (
+			Geoprocessor, parser, registry, GPMessage
+			) {
+
+		    parser.parse();
+
+		    function execGP() {
+		        //document.getElementById("progress_image").style.visibility = "visible";
+				document.getElementById("progressMessage").innerHTML = getDateTime();
+				document.getElementById("progressMessage").innerHTML += '     <img id=\'progress_image\' style=\'visibility:visible;\' src=\'loading_black.gif\' style />';
+		        var reportName = document.getElementById('ReportType').value;
+		        var gpTask = new Geoprocessor(globalGPTaskURL);
+				globalSubmitTime = getDateTime();
+		        var params = { "Report_Type": reportName };
+		        gpTask.submitJob(params, gpJobComplete, gpJobStatus, gpJobFailed);
+		    }
+
+
+		    function cancelGP() {
+		        var url = globalGPTaskURL + "/jobs/" + globaljobId + "/cancel";
+				console.log(url);
+				
+				xmlhttp = new XMLHttpRequest();
+				xmlhttp.open("POST", url, true);
+				xmlhttp.send();
+
+		    }
+
+			
+			function getDateTime(){
+				var currentdate = new Date();
+				var datetime = "    Sumbit Time: " + (currentdate.getMonth()+1) + "/"
+					+ currentdate.getDate()  + "/" 
+					+ currentdate.getFullYear() + " @ "  
+					+ currentdate.getHours() + ":"  
+					+ currentdate.getMinutes() + ":" 
+					+ currentdate.getSeconds();
+				return datetime;
+			}
+
+		    function gpJobStatus(jobinfo) {
+		        globaljobId = jobinfo.jobId;
+		        document.getElementById("gpmessages").value = "You can close this application after starting the refresh if you like.";
+		        document.getElementById("gpmessages").style.color = "#0A0A0A";
+		        document.getElementById("gpmessages").value = "";
+		        if (jobinfo.jobStatus != 'esriJobSubmitted')
+		            try {
+		                for (var i = 0; i < jobinfo.messages.length; i++) {
+		                    if (jobinfo.messages[i].description.slice(0, 9) != "Succeeded") {
+		                        if (jobinfo.messages[i].description.slice(0, 9) != "Executing") {
+		                            if (jobinfo.messages[i].description.slice(0, 5) != "Start") {
+		                                document.getElementById("gpmessages").value += jobinfo.messages[i].description;
+		                                document.getElementById("gpmessages").value += "\n";
+		                            }
+		                        }
+		                    }
+		                }
+		            }
+		            catch (err) {
+		                document.getElementById("gpmessages").value += err.message;
+		            }
+		    }
+
+
+		    function gpJobFailed(error) {
+		        document.getElementById("gpmessages").value += error.message
+		    }
+
+
+		    function gpJobComplete() {
+		        document.getElementById("progress_image").style.visibility = "hidden";
+		        document.getElementById("gpmessages").value += "\n";
+		        document.getElementById("gpmessages").value += "Request Finished.";
+		    }
+			
+
+
+		    app = {
+		        execGP: execGP, cancelGP: cancelGP
+		    };
+
+
+		})
+  </script>
+</body>
+</html>
