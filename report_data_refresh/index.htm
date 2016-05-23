@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <!--The viewport meta tag is used to improve the presentation and behavior of the samples
     on iOS devices-->
   <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
@@ -31,13 +32,14 @@
 	
 	<h3>Refresh Report Group</h3>
 	<select id="ReportType">
-		<option value="Accounting">Accounting</option>
+		<!--option value="Accounting">Accounting</option>
 		<option value="Class">Class</option>
 		<option value="Compliance">Compliance</option>
 		<option value="CurrentRiskResults">Current Risk Results</option>
+		<option value="FiveYearHOP">Five Year HOP</option>
 		<option value="HCA">HCA</option>
-		<option value="PHMSA">PHMSA</option>
 		<option value="OperatingPressure">Operating Pressure</option>
+		<option value="PHMSA">PHMSA</option-->
 	</select>
 	&nbsp;
 	&nbsp;
@@ -98,10 +100,10 @@
 				case "http://reportdatarefresh-qa":
 					globalenv = "QA_APP";
 					break;
-				case "http://reportdatarefresh-dev":
+				case "http://reportdatarefresh-dev-1031":
 					globalenv = "DEV_APP";
 					break;
-				case "http://reportdatarefresh-dev/":
+				case "http://reportdatarefresh-dev-1031/":
 					globalenv = "DEV_APP";
 					break;
 				default:
@@ -111,6 +113,26 @@
 			setTitle();
 			setTaskURL();
 			setTextArea();
+			setParameters();
+		}
+		
+		
+		function setParameters(){
+			url = globalGPTaskURL + "?f=pjson";
+			xmlhttp = new XMLHttpRequest();
+			xmlhttp.open("POST", url, false);
+			xmlhttp.send(); 
+			response = xmlhttp.response;
+			jsonResponse = JSON.parse(response);
+			choices = jsonResponse.parameters[0].choiceList;
+			var sel = document.getElementById('ReportType');
+			for(var i = 0; i < choices.length; i++){
+				var opt = document.createElement("option");
+				opt.innerHTML = choices[i];
+				opt.value = choices[i];
+				sel.appendChild(opt);
+			}
+			
 		}
 
 		
@@ -119,13 +141,13 @@
 			console.log(globalGPTaskURL);
 			switch (globalenv) {
 				case "QA_APP":
-					globalGPTaskURL = "http://someserver/arcgis/rest/services/AGSReportDataRefresh_QA/GPServer/AGSReportDataRefresh";
+					globalGPTaskURL = "http://qamachine:6080/arcgis/rest/services/AGSReportDataRefresh/GPServer/AGSReportDataRefresh";
 					break;
 				case "DEV_APP":
-					globalGPTaskURL = "http://someserver/arcgis/rest/services/AGSReportDataRefresh_DEV/GPServer/AGSReportDataRefresh";
+					globalGPTaskURL = "http://devmachine:6080/arcgis/rest/services/AGSReportDataRefresh/GPServer/AGSReportDataRefresh";
 					break;
 				default: 
-					globalGPTaskURL = "http://someserver/arcgis/rest/services/AGSReportDataRefresh/GPServer/AGSReportDataRefresh";
+					globalGPTaskURL = "http://prodmachine:6080/arcgis/rest/services/AGSReportDataRefresh/GPServer/AGSReportDataRefresh";
 			}
 		}
 		
@@ -133,13 +155,13 @@
 		function setReportPageUrl(){
 			switch (globalenv) {
 				case "QA_APP":
-					document.getElementById("report_link").href="http://ssrsqa/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
+					document.getElementById("report_link").href="http://ssrscloudqa/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
 					break;
 				case "DEV_APP":
-					document.getElementById("report_link").href="http://ssrsdev/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
+					document.getElementById("report_link").href="http://ssrsclouddev/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
 					break;
 				default:
-					document.getElementById("report_link").href="http://ssrsprod/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
+					document.getElementById("report_link").href="http://ssrscloudprod/Reports/Pages/Folder.aspx?ItemPath=%2fReports%2fApplications&ViewMode=List";
 			}
 		}
 			
